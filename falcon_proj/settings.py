@@ -29,15 +29,23 @@ STRIPE_API_KEY = os.getenv('STRIPE_API_KEY')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
 
-CORS_ALLOW_ALL_ORIGINS = True
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "").split(",")
+
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+
+if os.getenv("DJANGO_ENV") != "production":
+    from dotenv import load_dotenv
+    load_dotenv()
+
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -106,7 +114,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": [("redis", 6379)],
         },
     },
 }
@@ -120,8 +128,8 @@ DATABASES = {
         'NAME': 'falconforge_db',
         'USER': 'postgres',
         'PASSWORD': os.getenv("POSTGRES_PASSWORD"),
-        'HOST': 'db',
-        'PORT': '5432',
+	'HOST': 'db',
+	'PORT': '5432'
     }
 }
 
