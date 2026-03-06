@@ -22,10 +22,9 @@ class Comment(models.Model):
         on_delete=models.CASCADE, 
         related_name="replies"
     )
-    
-    
+      
     text = models.TextField()
-    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="comments")
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="comments", null=True)
     
     # List of user_ids of those who liked this comment
     likes = ArrayField(
@@ -34,6 +33,8 @@ class Comment(models.Model):
         blank=True,
         default=list
     )
+
+    general = models.BooleanField(default=False)
     
     def __str__(self):
         return f"{self.author} on {self.event} said {self.text[:50]}..."
