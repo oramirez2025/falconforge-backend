@@ -10,12 +10,13 @@ class CommentSerializer(serializers.ModelSerializer):
         child=serializers.IntegerField(),
         required=False
     )
-
+    authorId = serializers.IntegerField(source='author.id', read_only=True)
     class Meta:
         model = Comment
         fields = [
             "id",
             "author",
+            "authorId",
             "parent",
             "event",
             "text",
@@ -23,7 +24,7 @@ class CommentSerializer(serializers.ModelSerializer):
             "likes",
             "replies",
         ]
-        read_only_fields = ["author", "event"]
+        read_only_fields = ["author", "event", "general"]
 
     def get_replies(self, curr_comment):
         replies = curr_comment.replies.all().order_by("time")

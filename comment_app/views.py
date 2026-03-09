@@ -26,6 +26,66 @@ class ACommentView(APIView):
         return Response(ser.data, status=HTTP_200_OK)
 
 
+
+class GeneralCommentView(APIView):
+    def get(self, request, year):
+        comments = Comment.objects.filter(
+            time__year=year,
+            general=True
+        )
+        ser = CommentSerializer(comments, many=True)
+        return Response(ser.data, status=HTTP_200_OK)
+    
+    def post(self, request, year):
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Need to signup/login!"},
+                status=HTTP_401_UNAUTHORIZED
+            )
+
+        ser = CommentSerializer(data=request.data)
+
+        if not ser.is_valid():
+            return Response(ser.errors, status=HTTP_400_BAD_REQUEST)
+
+        parent = ser.validated_data.get("parent")
+
+        # -------- Validate Parent --------
+        if parent:
+            if not parent.general:
+                return Response(
+                    {"detail": "Parent must be a general comment."},
+                    status=HTTP_400_BAD_REQUEST
+                )
+
+            if parent.time.year != int(year):
+                return Response(
+                    {"detail": "Parent must belong to same year."},
+                    status=HTTP_400_BAD_REQUEST
+                )
+
+        # -------- Save --------
+        ser.save(
+            author=request.user,
+            general=True,
+            event=None
+        )
+
+        # -------- Broadcast --------
+        channel_layer = get_channel_layer()
+        
+        async_to_sync(channel_layer.group_send)(
+            f"general_{year}",
+            {
+                "type": "broadcast_comment",
+                "comment": ser.data,
+                "action": "new_comment",
+            },
+        )
+
+        return Response(ser.data, status=HTTP_201_CREATED)
+    
+
 class CommentView(APIView):
     def is_admin(self, user):
         return user.is_authenticated and getattr(user, "is_admin", False)
@@ -56,6 +116,7 @@ class CommentView(APIView):
                 ser.save(author=request.user, event=event)
                 # Broadcast new comment to the event group
                 channel_layer = get_channel_layer()
+                print("BROADCASTING TO:", f"event_{event.id}")
                 async_to_sync(channel_layer.group_send)(
                     f"event_{event.id}",
                     {
@@ -66,6 +127,8 @@ class CommentView(APIView):
                 )
                 return Response(ser.data, status=HTTP_201_CREATED)
             else:
+                print(ser.errors)
+                print(request)
                 return Response(ser.errors, status=HTTP_400_BAD_REQUEST)
         else:
             return Response("Need to signup/login!", status=HTTP_401_UNAUTHORIZED)
@@ -93,8 +156,9 @@ class CommentView(APIView):
             ser = CommentSerializer(comment)
 
             channel_layer = get_channel_layer()
+            key = f"event_{comment.event.id}" if comment.event else f"general_{comment.time.year}"
             async_to_sync(channel_layer.group_send)(
-                f"event_{comment.event.id}",
+                key,
                 {
                     "type": "broadcast_comment",
                     "comment": ser.data,
@@ -116,8 +180,9 @@ class CommentView(APIView):
             comment_ser.save()
 
             channel_layer = get_channel_layer()
+            key = f"event_{comment.event.id}" if comment.event else f"general_{comment.time.year}"
             async_to_sync(channel_layer.group_send)(
-                f"event_{comment.event.id}",
+                key,
                 {
                     "type": "broadcast_comment",
                     "comment": comment_ser.data,
@@ -137,11 +202,13 @@ class CommentView(APIView):
             return Response({"detail": "Not authorized"}, status=HTTP_403_FORBIDDEN)
         # Broadcast delete to the event group before removing
         channel_layer = get_channel_layer()
+        key = f"event_{comment.event.id}" if comment.event else f"general_{comment.time.year}"
+        print(f"BROADCASTING TO {key}")
         async_to_sync(channel_layer.group_send)(
-            f"event_{comment.event.id}",
+            key,
             {
                 "type": "broadcast_comment",
-                "comment": {"id": comment.id},
+                "id": comment.id,
                 "action": "delete_comment",
             },
         )

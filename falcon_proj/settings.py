@@ -12,13 +12,13 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
-if os.getenv("DJANGO_ENV") != "production":
-    from dotenv import load_dotenv
-    load_dotenv()
-
+from dotenv import load_dotenv
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+BASE_URL = "http://localhost:8000"
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -29,27 +29,15 @@ STRIPE_API_KEY = os.getenv('STRIPE_API_KEY')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET')
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
 
-DEBUG = os.getenv("DJANGO_DEBUG", "False") == "True"
+ALLOWED_HOSTS = ['*']
 
-ALLOWED_HOSTS = ["*"]
-CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
-
-USE_X_FORWARDED_HOST = True
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "http")
-
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
-
-if os.getenv("DJANGO_ENV") != "production":
-    from dotenv import load_dotenv
-    load_dotenv()
-
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
-
-STATIC_ROOT = BASE_DIR / "staticfiles"
+CORS_ALLOW_ALL_ORIGINS = True
 
 
+# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -111,17 +99,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'falcon_proj.wsgi.application'
 
-# Channels
 ASGI_APPLICATION = 'falcon_proj.asgi.application'
 
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("redis", 6379)],
+            "hosts": [("127.0.0.1", 6379)],
         },
     },
 }
+
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
@@ -130,12 +118,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'falconforge_db',
-        'USER': 'postgres',
-        'PASSWORD': os.getenv("POSTGRES_PASSWORD"),
-	'HOST': 'db',
-	'PORT': '5432'
     }
 }
+
 
 
 # Password validation
